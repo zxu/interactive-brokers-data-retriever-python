@@ -1,5 +1,4 @@
 import collections
-import datetime
 import logging
 import threading
 import time
@@ -8,7 +7,6 @@ from ibapi.common import TickerId, BarData
 from ibapi.utils import iswrapper
 
 from Client import Client
-from ContractSamples import ContractSamples
 from Utils import printWhenExecuting
 from Wrapper import Wrapper
 
@@ -19,8 +17,6 @@ class App(Wrapper, Client):
     def __init__(self, event: threading.Event):
         Wrapper.__init__(self)
         Client.__init__(self, wrapper=self)
-        # ! [socket_init]
-        # self.nKeybInt = 0
         self.started = False
         self.nextValidOrderId = None
         self.permId2ord = {}
@@ -61,13 +57,6 @@ class App(Wrapper, Client):
         self.event.set()
 
     def keyboardInterrupt(self):
-        # self.nKeybInt += 1
-        # if self.nKeybInt == 1:
-        #     self.stop()
-        # else:
-        #     print("Finishing test")
-        #     self.done = True
-
         self.stop()
         time.sleep(1)
         self.done = True
@@ -88,7 +77,7 @@ class App(Wrapper, Client):
         if errorCode not in (2104, 2106, 366):
             super().error(reqId, errorCode, errorString)
             print("Error. Id: ", reqId, " Code: ", errorCode, " Msg: ", errorString)
-        if errorCode == 321:
+        if errorCode == 321 or errorCode == 200:
             self.historicalDataRequests_cancel()
             self.event.set()
 

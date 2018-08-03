@@ -2,12 +2,8 @@ import argparse
 import datetime
 import logging
 import threading
-import time
 
 from ibapi.order_condition import *
-from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import WordCompleter
-from prompt_toolkit.styles import Style
 
 from App import App
 from Prompter import historical_data_query_options
@@ -21,35 +17,6 @@ class Worker(threading.Thread):
     def run(self):
         self.app.run()
         print("Worker thread [%s] finished." % threading.get_ident())
-
-
-sql_completer = WordCompleter([
-    'abort', 'action', 'add', 'after', 'all', 'alter', 'analyze', 'and',
-    'as', 'asc', 'attach', 'autoincrement', 'before', 'begin', 'between',
-    'by', 'cascade', 'case', 'cast', 'check', 'collate', 'column',
-    'commit', 'conflict', 'constraint', 'create', 'cross', 'current_date',
-    'current_time', 'current_timestamp', 'database', 'default',
-    'deferrable', 'deferred', 'delete', 'desc', 'detach', 'distinct',
-    'drop', 'each', 'else', 'end', 'escape', 'except', 'exclusive',
-    'exists', 'explain', 'fail', 'for', 'foreign', 'from', 'full', 'glob',
-    'group', 'having', 'if', 'ignore', 'immediate', 'in', 'index',
-    'indexed', 'initially', 'inner', 'insert', 'instead', 'intersect',
-    'into', 'is', 'isnull', 'join', 'key', 'left', 'like', 'limit',
-    'match', 'natural', 'no', 'not', 'notnull', 'null', 'of', 'offset',
-    'on', 'or', 'order', 'outer', 'plan', 'pragma', 'primary', 'query',
-    'raise', 'recursive', 'references', 'regexp', 'reindex', 'release',
-    'rename', 'replace', 'restrict', 'right', 'rollback', 'row',
-    'savepoint', 'select', 'set', 'table', 'temp', 'temporary', 'then',
-    'to', 'transaction', 'trigger', 'union', 'unique', 'update', 'using',
-    'vacuum', 'values', 'view', 'virtual', 'when', 'where', 'with',
-    'without'], ignore_case=True)
-
-style = Style.from_dict({
-    'completion-menu.completion': 'bg:#008888 #ffffff',
-    'completion-menu.completion.current': 'bg:#00aaaa #000000',
-    'scrollbar.background': 'bg:#88aaaa',
-    'scrollbar.button': 'bg:#222222',
-})
 
 
 def main():
@@ -84,12 +51,9 @@ def main():
     PercentChangeCondition.__setattr__ = utils.setattr_log
     VolumeCondition.__setattr__ = utils.setattr_log
 
+    event = threading.Event()
+    app = App(event)
     try:
-        # print(threading.get_ident())
-
-        event = threading.Event()
-        app = App(event)
-
         if args.global_cancel:
             app.globalCancelOnly = True
         app.connect("127.0.0.1", args.port, clientId=0)
@@ -99,14 +63,8 @@ def main():
         worker = Worker(app)
         worker.start()
 
-        # worker.join()
-
-        # app.run()
-
         print("Wait for connection to be established...")
         event.wait(5)
-
-        session = PromptSession(completer=sql_completer, style=style)
 
         while True:
             try:
@@ -116,7 +74,6 @@ def main():
                 if not app.isConnected():
                     break
 
-                # time.sleep(2)
                 from Prompter import build_contract, choose_action
 
                 choice = choose_action()
@@ -129,20 +86,11 @@ def main():
                     parameters = historical_data_query_options()
                     event.clear()
                     app.reqHistoricalData(4101, contract, **parameters)
-
-                    # event.clear()
-                    # app.historicalDataRequests_req()
             except KeyboardInterrupt:
                 pass
             except (EOFError, SystemExit):
                 event.clear()
                 app.keyboardInterrupt()
-
-                # app.dumpTestCoverageSituation()
-                # app.dumpReqAnsErrSituation()
-
-                # app.disconnect()
-                # raise
             event.wait()
     except RuntimeError:
         logging.error("Unexpected error")

@@ -1,8 +1,14 @@
+import pandas as pd
 from prompt_toolkit import PromptSession, HTML
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
+
+all_symbols = pd.read_csv('data/all_symbols.csv', header=None)[0].tolist()
+all_exchanges = pd.read_csv('data/all_exchanges.csv', header=None)[0].tolist()
+all_currencies = pd.read_csv('data/all_currencies.csv', header=None)[0].tolist()
+all_security_types = pd.read_csv('data/all_security_types.csv', header=None)[0].tolist()
 
 style = Style.from_dict({
     'completion-menu.completion': 'bg:#008888 #ffffff',
@@ -70,10 +76,10 @@ def build_contract():
 
     contract = Contract()
     questions = [
-        Question('Security symbol', 'symbol', ['SPX', 'SPY', 'AMZN']),
-        Question('Security type', 'secType', ['IND', 'STK', 'FUND']),
-        Question('Currency', 'currency', ['USD', 'AUD', 'EUR']),
-        Question('Exchange', 'exchange', ['CBOE', 'ISLAND']),
+        Question('Security symbol', 'symbol', all_symbols),
+        Question('Security type', 'secType', all_security_types),
+        Question('Currency', 'currency', all_currencies),
+        Question('Exchange', 'exchange', all_exchanges),
     ]
 
     print('\r')
@@ -87,8 +93,6 @@ def build_contract():
             except KeyboardInterrupt:
                 pass
         setattr(contract, question.attribute, answer)
-
-        print(contract)
     return contract
 
 
@@ -117,8 +121,6 @@ def historical_data_query_options():
             except KeyboardInterrupt:
                 pass
         parameters.update({question.attribute: answer})
-
-    # print(parameters)
 
     parameters.update({'useRTH': 1, 'formatDate': 1, 'keepUpToDate': False, 'chartOptions': []})
     return parameters
