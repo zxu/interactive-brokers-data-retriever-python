@@ -2,6 +2,7 @@ import argparse
 import datetime
 import logging
 import threading
+import time
 
 from ibapi.order_condition import *
 from prompt_toolkit import PromptSession
@@ -9,6 +10,7 @@ from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit.styles import Style
 
 from App import App
+from Prompter import historical_data_query_options
 
 
 class Worker(threading.Thread):
@@ -18,7 +20,7 @@ class Worker(threading.Thread):
 
     def run(self):
         self.app.run()
-        print("Worker thread %s existing." % threading.get_ident())
+        print("Worker thread [%s] finished." % threading.get_ident())
 
 
 sql_completer = WordCompleter([
@@ -82,17 +84,8 @@ def main():
     PercentChangeCondition.__setattr__ = utils.setattr_log
     VolumeCondition.__setattr__ = utils.setattr_log
 
-    # from inspect import signature as sig
-    # import code code.interact(local=dict(globals(), **locals()))
-    # sys.exit(1)
-
-    # tc = TestClient(None)
-    # tc.reqMktData(1101, ContractSamples.USStockAtSmart(), "", False, None)
-    # print(tc.reqId2nReq)
-    # sys.exit(1)
-
     try:
-        print(threading.get_ident())
+        # print(threading.get_ident())
 
         event = threading.Event()
         app = App(event)
@@ -123,18 +116,26 @@ def main():
                 if not app.isConnected():
                     break
 
-                text = session.prompt('> ')
+                # time.sleep(2)
+                from Prompter import build_contract, choose_action
 
-                # session.__setattr__("completer", ["Hello", "World"])
+                choice = choose_action()
 
-                text1 = session.prompt('> ', completer=WordCompleter(['Hello', 'World'], ignore_case=True), style=style)
-                print(text1)
+                if choice == 'X':
+                    raise EOFError
 
-                if text == "Test":
-                    app.historicalDataRequests_req()
+                if choice == "H":
+                    contract = build_contract()
+                    parameters = historical_data_query_options()
+                    event.clear()
+                    app.reqHistoricalData(4101, contract, **parameters)
+
+                    # event.clear()
+                    # app.historicalDataRequests_req()
             except KeyboardInterrupt:
-                pass  # Control-C pressed. Try again.
+                pass
             except (EOFError, SystemExit):
+                event.clear()
                 app.keyboardInterrupt()
 
                 # app.dumpTestCoverageSituation()
@@ -142,9 +143,11 @@ def main():
 
                 # app.disconnect()
                 # raise
+            event.wait()
     except RuntimeError:
         logging.error("Unexpected error")
     except KeyboardInterrupt:
+        app.disconnect()
         print("Exiting.")
     finally:
         print("Cleaning up...")
