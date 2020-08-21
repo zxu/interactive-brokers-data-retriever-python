@@ -44,7 +44,7 @@ class App(Wrapper, Client):
 
     @iswrapper
     def connectAck(self):
-        if self.async:
+        if self.asynchronous:
             self.startApi()
 
     @iswrapper
