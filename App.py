@@ -2,6 +2,7 @@ import collections
 import logging
 import threading
 import time
+import pandas as pd
 
 from ibapi.common import TickerId, BarData
 from ibapi.utils import iswrapper
@@ -24,6 +25,10 @@ class App(Wrapper, Client):
         self.globalCancelOnly = False
         self.simplePlaceOid = None
         self.event = event
+        self.df = pd.DataFrame(columns=["reqId", "bar.date", "bar.open",
+                                        "bar.high", "bar.low", "bar.close", "bar.volume",
+                                        "bar.barCount", "bar.average"])
+        self.idx = -1
 
     def dumpTestCoverageSituation(self):
         for clntMeth in sorted(self.clntMeth2callCount.keys()):
@@ -96,6 +101,11 @@ class App(Wrapper, Client):
               "High:", bar.high, "Low:", bar.low, "Close:", bar.close, "Volume:", bar.volume,
               "Count:", bar.barCount, "WAP:", bar.average)
 
+        self.idx = self.idx + 1
+        self.df.loc[self.idx] = [reqId, bar.date, bar.open,
+                                                bar.high, bar.low, bar.close, bar.volume,
+                                                bar.barCount, bar.average]
+
     @iswrapper
     def historicalDataEnd(self, reqId: int, start: str, end: str):
         super().historicalDataEnd(reqId, start, end)
@@ -103,8 +113,17 @@ class App(Wrapper, Client):
 
         self.event.set()
 
+        self.df.to_csv('historical.csv')
+        self.df = self.df[0:0]
+        self.idx = -1
+
     @iswrapper
     def historicalDataUpdate(self, reqId: int, bar: BarData):
         print("HistoricalDataUpdate. ", reqId, " Date:", bar.date, "Open:", bar.open,
               "High:", bar.high, "Low:", bar.low, "Close:", bar.close, "Volume:", bar.volume,
               "Count:", bar.barCount, "WAP:", bar.average)
+
+        self.idx = self.idx + 1
+        self.df.loc[self.idx] = [reqId, bar.date, bar.open,
+                                                bar.high, bar.low, bar.close, bar.volume,
+                                                bar.barCount, bar.average]
